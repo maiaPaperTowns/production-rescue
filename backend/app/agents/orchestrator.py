@@ -254,10 +254,26 @@ def run_rescue_analysis(db: Session, shooting_day_id: int, raw_text: str) -> m.A
     )
     for rank, idx in enumerate(top_indices):
         c = ctx.candidates[idx]
+        if idx not in ctx.impacts:
+            # Gemini may have proposed a plan without explicitly calling
+            # calculate_impact on it; compute it now so every persisted
+            # version still carries a real, tool-derived impact snapshot.
+            calculate_impact(ctx, candidate_index=idx)
+        plan_impact = ctx.impacts[idx]
+
         version = m.ScheduleVersion(
             shooting_day_id=shooting_day_id, version_number=latest_version_number + 1 + rank,
             status="PROPOSED", created_by="agent", label=f"Plan {chr(65 + rank)}",
             score=c.score, is_current=False, agent_run_id=run.id,
+            downtime_hours_avoided=plan_impact.downtime_hours_avoided,
+            estimated_cost_avoided=plan_impact.estimated_cost_avoided,
+            scenes_preserved=plan_impact.scenes_preserved_of_total[0],
+            scenes_total=plan_impact.scenes_preserved_of_total[1],
+            scenes_saved=plan_impact.scenes_saved,
+            scenes_delayed=plan_impact.scenes_delayed,
+            changed_call_times=plan_impact.changed_call_times,
+            company_moves_change=plan_impact.company_moves_change,
+            overtime_change_minutes=plan_impact.overtime_change_minutes,
         )
         db.add(version)
         db.flush()

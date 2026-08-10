@@ -21,6 +21,19 @@ class ScheduleVersion(Base):
     agent_run_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agent_runs.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
+    # Impact snapshot, computed once by calculate_impact() when this version was
+    # proposed. Persisted (not recomputed on read) so the audit trail always
+    # reflects exactly what a human approver was shown at decision time.
+    downtime_hours_avoided: Mapped[float] = mapped_column(Numeric(6, 1), default=0)
+    estimated_cost_avoided: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    scenes_preserved: Mapped[int] = mapped_column(Integer, default=0)
+    scenes_total: Mapped[int] = mapped_column(Integer, default=0)
+    scenes_saved: Mapped[int] = mapped_column(Integer, default=0)
+    scenes_delayed: Mapped[int] = mapped_column(Integer, default=0)
+    changed_call_times: Mapped[int] = mapped_column(Integer, default=0)
+    company_moves_change: Mapped[int] = mapped_column(Integer, default=0)
+    overtime_change_minutes: Mapped[int] = mapped_column(Integer, default=0)
+
     shooting_day: Mapped["ShootingDay"] = relationship(back_populates="schedule_versions")
     assignments: Mapped[list["ScheduleAssignment"]] = relationship(back_populates="schedule_version", cascade="all, delete-orphan")
 

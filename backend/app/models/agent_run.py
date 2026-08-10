@@ -16,7 +16,10 @@ class AgentRun(Base):
     status: Mapped[str] = mapped_column(String(20), default="running")  # running | proposed | approved | rejected | infeasible | failed
     candidates_generated: Mapped[int] = mapped_column(Integer, default=0)
     candidates_valid: Mapped[int] = mapped_column(Integer, default=0)
-    recommended_schedule_version_id: Mapped[Optional[int]] = mapped_column(ForeignKey("schedule_versions.id"), nullable=True)
+    recommended_schedule_version_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("schedule_versions.id", use_alter=True, name="fk_agent_runs_recommended_schedule_version"),
+        nullable=True,
+    )
     explanation: Mapped[str] = mapped_column(Text, default="")
     blocking_constraints: Mapped[list] = mapped_column(JSON, default=list)
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

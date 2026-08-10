@@ -40,6 +40,20 @@ from app.services.scheduling_models import (
 MAX_PERMUTATIONS = 5000
 
 
+def disruption_items_to_parsed(items) -> list[ParsedDisruption]:
+    """Adapt validated app.schemas.disruption.DisruptionItem objects (produced by
+    Gemini or the mock parser) into the solver's internal ParsedDisruption."""
+    parsed: list[ParsedDisruption] = []
+    for item in items:
+        parsed.append(ParsedDisruption(
+            type=item.type, condition=item.condition, start_time=item.start_time, end_time=item.end_time,
+            affects=list(item.affects), actor_name=item.actor, available_until=item.available_until,
+            available_from=item.available_from, equipment_name=item.equipment, available_after=item.available_after,
+            location_name=item.location, unavailable_start=item.unavailable_start, unavailable_end=item.unavailable_end,
+        ))
+    return parsed
+
+
 # ---------------------------------------------------------------------------
 # Context construction: load ORM data into plain, DB-independent dataclasses
 # ---------------------------------------------------------------------------

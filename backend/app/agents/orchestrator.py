@@ -32,6 +32,7 @@ from app.agents.tools import (
     get_current_schedule,
     get_weather,
     propose_schedule_change,
+    research_external_context,
     validate_schedule,
 )
 from app.core.config import get_settings
@@ -109,6 +110,12 @@ def _deterministic_pipeline(ctx: AgentContext) -> None:
         for loc_id in exterior_locations:
             get_weather(ctx, location=ctx.day_context.location_names.get(loc_id, "set"),
                         date=str(ctx.shooting_day.shoot_date))
+
+    for d in ctx.disruptions:
+        if d.type == "location_unavailable" and d.location_name:
+            research_external_context(
+                ctx, query=f"{d.location_name} permit status closure {ctx.shooting_day.shoot_date}"
+            )
 
     generate_candidate_schedules(ctx)
     top_indices = [i for i, c in enumerate(ctx.candidates) if c.valid][:3]

@@ -21,6 +21,7 @@ import app.models as m
 from app.services import impact_service as impact_svc
 from app.services import scheduling_service as sched
 from app.services import weather_service
+from app.services.partner_service import get_partner_service
 from app.services.interval_utils import fmt_hm, parse_hm
 from app.services.scheduling_models import Assignment, CandidateSchedule, DayContext, ParsedDisruption
 
@@ -131,6 +132,20 @@ def get_weather(ctx: AgentContext, location: str, date: str, **_) -> dict:
     return out
 
 
+def research_external_context(ctx: AgentContext, query: str, **_) -> dict:
+    """Partner integration (Parallel): look outward for real-world context a
+    production's own database can't provide, e.g. whether a location's permit
+    was actually revoked, or a nearby event/closure is affecting access."""
+    result = get_partner_service().research_context(query)
+    out = {
+        "query": result.query, "source": result.source,
+        "results": [{"title": r.title, "url": r.url, "excerpt": r.excerpt} for r in result.results],
+    }
+    summary = f"Researched '{query}' via Parallel ({result.source}): {len(result.results)} result(s)"
+    ctx.record("research_external_context", {"query": query}, out, summary)
+    return out
+
+
 def detect_affected_scenes(ctx: AgentContext, **_) -> dict:
     affected = sched.detect_affected_scenes(ctx.day_context, ctx.original_assignments)
     ctx.affected_scenes = affected
@@ -205,6 +220,7 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "check_location_availability": check_location_availability,
     "check_equipment_availability": check_equipment_availability,
     "get_weather": get_weather,
+    "research_external_context": research_external_context,
     "detect_affected_scenes": detect_affected_scenes,
     "generate_candidate_schedules": generate_candidate_schedules,
     "validate_schedule": validate_schedule,
@@ -237,6 +253,10 @@ TOOL_DECLARATIONS: list[dict[str, Any]] = [
     {"name": "get_weather", "description": "Get the weather forecast for a location and date.",
      "parameters": {"type": "object", "properties": {"location": {"type": "string"}, "date": {"type": "string"}},
                      "required": ["location", "date"]}},
+    {"name": "research_external_context", "description": "Research real-world context beyond the production's own "
+     "data via the Parallel partner API — e.g. whether a location's permit was actually revoked, or a nearby "
+     "closure/event is affecting access. Use this for location_unavailable disruptions or to corroborate weather.",
+     "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
     {"name": "detect_affected_scenes", "description": "Determine which of today's scheduled scenes are affected by the reported disruptions, and why.",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "generate_candidate_schedules", "description": "Run the constraint solver to generate and score alternative schedules for today.",

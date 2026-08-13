@@ -24,3 +24,6 @@ frontend/.env*.local
 
 # Logs
 *.log
+
+# Stray files unrelated to this project
+frontend/9b459e24b5da3260ea72f7ce88aa7ab3.webp

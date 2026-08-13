@@ -22,6 +22,7 @@ class AgentRun(Base):
     )
     explanation: Mapped[str] = mapped_column(Text, default="")
     blocking_constraints: Mapped[list] = mapped_column(JSON, default=list)
+    affected_scene_ids: Mapped[list] = mapped_column(JSON, default=list)
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     execution_ms: Mapped[int] = mapped_column(Integer, default=0)

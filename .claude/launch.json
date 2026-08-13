@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/eggquakes/production-rescue/backend && source .venv/bin/activate && DATABASE_URL=sqlite:///./production_rescue.db uvicorn app.main:app --reload --port 8000"],
+      "port": 8000,
+      "url": "http://localhost:8000"
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "npm run dev"],
+      "port": 3000,
+      "url": "http://localhost:3000"
+    }
+  ]
+}

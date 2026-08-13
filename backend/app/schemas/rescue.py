@@ -49,6 +49,7 @@ class AgentRunOut(BaseModel):
     candidates_valid: int
     explanation: str
     blocking_constraints: list[str]
+    affected_scene_ids: list[int]
     execution_ms: int
     started_at: datetime
     completed_at: Optional[datetime]

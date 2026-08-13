@@ -232,6 +232,7 @@ def run_rescue_analysis(db: Session, shooting_day_id: int, raw_text: str) -> m.A
 
     run.candidates_generated = len(ctx.candidates)
     run.candidates_valid = len([c for c in ctx.candidates if c.valid])
+    run.affected_scene_ids = [a.scene_id for a in ctx.affected_scenes]
 
     if ctx.recommended_index is None:
         run.status = "infeasible"
@@ -290,7 +291,11 @@ def run_rescue_analysis(db: Session, shooting_day_id: int, raw_text: str) -> m.A
             scene = ctx.day_context.scene_by_id(a.scene_id)
             if orig and orig.start_min != a.start_min:
                 affected = next((af for af in ctx.affected_scenes if af.scene_id == scene.id), None)
-                reason = affected.reasons[0][1] if affected and affected.reasons else "Rescheduled to satisfy updated constraints"
+                # Distinguish scenes moved because they were genuinely blocked at
+                # their original slot from ones the solver simply reordered to
+                # keep the day efficient — conflating the two would make the
+                # Before/After view flag scenes that were never actually at risk.
+                reason = affected.reasons[0][1] if affected and affected.reasons else "Reordered to keep the shooting day efficient"
             db.add(m.ScheduleAssignment(
                 schedule_version_id=version.id, scene_id=a.scene_id, start_min=a.start_min, end_min=a.end_min,
                 location_id=a.location_id, status="scheduled", change_reason=reason,

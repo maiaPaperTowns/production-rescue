@@ -275,7 +275,7 @@ def validate_schedule(
         scene = context.scene_by_id(scene_id)
         warnings.append(ScheduleViolation(
             scene_id, "dropped",
-            f"Scene {scene.scene_number} ({scene.title}) could not be fit into today — recommend moving it to another shooting day",
+            f"Scene {scene.scene_number} ({scene.title}) could not be fit into today. Recommend moving it to another shooting day.",
         ))
 
     return len(violations) == 0, violations, warnings

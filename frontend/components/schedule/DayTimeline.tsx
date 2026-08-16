@@ -4,7 +4,11 @@ import type { Assignment } from "@/types";
 import { cn } from "@/lib/utils";
 
 export function DayTimeline({ assignments, compact }: { assignments: Assignment[]; compact?: boolean }) {
-  const sorted = [...assignments].sort((a, b) => a.start.localeCompare(b.start));
+  const sorted = [...assignments].sort((a, b) => {
+    if (a.status === "dropped" && b.status !== "dropped") return 1;
+    if (b.status === "dropped" && a.status !== "dropped") return -1;
+    return a.start.localeCompare(b.start);
+  });
 
   return (
     <div className="relative overflow-x-auto pb-2">
@@ -16,7 +20,7 @@ export function DayTimeline({ assignments, compact }: { assignments: Assignment[
           return (
             <div key={a.scene_id} className={cn("flex flex-col", compact ? "w-40" : "w-48")}>
               <span className="text-xs font-medium text-muted-foreground tabular-nums">
-                {a.status === "dropped" ? "—" : to12h(a.start)}
+                {a.status === "dropped" ? "N/A" : to12h(a.start)}
               </span>
               <div className="relative flex items-center py-2">
                 <span className={cn("size-2.5 rounded-full ring-4 ring-background z-10", meta.dot)} />

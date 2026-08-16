@@ -215,7 +215,7 @@ export function RescueButton({ shootingDayId, originalAssignments, onScheduleCha
             )}
           </div>
 
-          {phase === "results" && run.status !== "infeasible" && (
+          {phase === "results" && run && run.status !== "infeasible" && (
             <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur px-6 py-4">
               <div className="max-w-5xl mx-auto flex items-center justify-end gap-2">
                 <Button variant="ghost" onClick={handleReject} disabled={decisionLoading} className="gap-2">

@@ -16,7 +16,7 @@ export function StatCard({
   tone?: "default" | "warning" | "danger";
 }) {
   return (
-    <Card className="py-0">
+    <Card className="py-0 hover:ring-primary/30 transition-all">
       <CardContent className="p-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
@@ -31,8 +31,8 @@ export function StatCard({
           </p>
           {sublabel && <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>}
         </div>
-        <div className="rounded-md bg-muted p-2 shrink-0">
-          <Icon className="size-4 text-muted-foreground" strokeWidth={2} />
+        <div className="rounded-full bg-gradient-brand p-2 shrink-0 shadow-[var(--glow-primary)]">
+          <Icon className="size-4 text-white" strokeWidth={2} />
         </div>
       </CardContent>
     </Card>

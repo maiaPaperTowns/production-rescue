@@ -31,9 +31,11 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-2 px-4 h-14 border-b border-sidebar-border">
-        <Film className="size-5 text-primary" strokeWidth={2.25} />
+    <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/70 backdrop-blur-xl text-sidebar-foreground">
+      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-sidebar-border">
+        <span className="flex size-7 items-center justify-center rounded-full bg-gradient-brand shadow-[var(--glow-primary)]">
+          <Film className="size-3.5 text-white" strokeWidth={2.5} />
+        </span>
         <span className="text-sm font-semibold tracking-wide">PRODUCTION RESCUE</span>
       </div>
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
@@ -45,9 +47,9 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2.5 rounded-full px-3 py-2 text-sm font-medium transition-all",
                 active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  ? "bg-gradient-brand text-white shadow-[var(--glow-primary)]"
                   : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               )}
             >

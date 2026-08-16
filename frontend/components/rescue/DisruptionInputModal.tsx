@@ -53,7 +53,7 @@ export function DisruptionInputModal({
           autoFocus
         />
         {errorMessage && (
-          <p className="text-sm text-destructive">{errorMessage} Your message was preserved — try again.</p>
+          <p className="text-sm text-destructive">{errorMessage} Your message was preserved, try again.</p>
         )}
 
         <div className="space-y-2">

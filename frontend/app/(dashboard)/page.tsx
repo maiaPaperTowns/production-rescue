@@ -16,14 +16,15 @@ export default function CommandCenterPage() {
   const [scenes, setScenes] = useState<Scene[]>([]);
 
   const assignments = schedule?.current_version?.assignments ?? [];
+  const scheduledAssignments = assignments.filter((a) => a.status !== "dropped");
 
   useEffect(() => {
-    if (assignments.length === 0) {
+    if (scheduledAssignments.length === 0) {
       setScenes([]);
       return;
     }
     let cancelled = false;
-    Promise.all(assignments.map((a) => api.getScene(a.scene_id)))
+    Promise.all(scheduledAssignments.map((a) => api.getScene(a.scene_id)))
       .then((results) => {
         if (!cancelled) setScenes(results);
       })
@@ -69,9 +70,11 @@ export default function CommandCenterPage() {
     <div className="p-6 space-y-8 max-w-6xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Good morning. Here&apos;s today&apos;s production status.</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Shooting Day {currentDay.day_number} of {production.total_shooting_days} — {currentDay.shoot_date}
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Good morning. Here&apos;s today&apos;s <span className="text-gradient-brand">production status</span>.
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Shooting Day {currentDay.day_number} of {production.total_shooting_days}, {currentDay.shoot_date}
           </p>
         </div>
         <RescueButton
@@ -82,7 +85,7 @@ export default function CommandCenterPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard label="Scenes Today" value={String(assignments.length)} icon={Clapperboard} />
+        <StatCard label="Scenes Today" value={String(scheduledAssignments.length)} icon={Clapperboard} />
         <StatCard
           label="Cast"
           value={`${distinctActors.size} / ${distinctActors.size}`}

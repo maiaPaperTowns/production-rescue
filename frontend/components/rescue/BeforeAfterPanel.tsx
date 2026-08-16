@@ -94,7 +94,7 @@ export function BeforeAfterPanel({
                 <span className="font-medium text-foreground">
                   Scene{proposed.dropped_scenes.length > 1 ? "s" : ""} {proposed.dropped_scenes.join(", ")}
                 </span>{" "}
-                could not be fit into today — recommend moving to another shooting day.
+                could not be fit into today. Recommend moving it to another shooting day.
               </p>
             </div>
           )}

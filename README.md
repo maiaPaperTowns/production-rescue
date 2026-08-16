@@ -180,6 +180,33 @@ Open `http://localhost:3000` (or whichever port you ran it on).
 docker compose up --build
 ```
 
+## Deploying to production (Cloud Run + Vercel)
+
+The hackathon deploy targets Google Cloud Run for the backend (reinforcing the Google Cloud integration)
+and Vercel for the Next.js frontend. Both build remotely from this GitHub repo; no local Docker build is
+required.
+
+**Backend, Google Cloud Run:**
+
+1. In the [Cloud Run console](https://console.cloud.google.com/run), create a service and choose
+   "Continuously deploy from a repository," connecting this GitHub repo.
+2. Set the source directory to `backend` and the build type to Dockerfile (`backend/Dockerfile`).
+3. Leave `DATABASE_URL` unset. The container seeds an ephemeral SQLite database on every start (same as
+   `docker-compose`); one demo production doesn't need Cloud SQL. Set `min instances` to `1` so approvals
+   made during a demo stay on the same instance's SQLite file rather than a fresh cold-started copy.
+4. Add environment variables/secrets as needed: `GOOGLE_API_KEY` (enter it directly in the console, never
+   in chat or committed to the repo), `GEMINI_MODEL`, `PARALLEL_API_KEY`, and `CORS_ORIGINS` (add your
+   Vercel URL once you have it, see below).
+5. Deploy, then copy the resulting `*.run.app` service URL.
+
+**Frontend, Vercel:**
+
+1. Import this GitHub repo at [vercel.com/new](https://vercel.com/new).
+2. Set the project's Root Directory to `frontend`.
+3. Set `NEXT_PUBLIC_API_BASE_URL` to the Cloud Run URL from above, and `NEXT_PUBLIC_DEMO_MODE=true`.
+4. Deploy, then copy the resulting `*.vercel.app` URL.
+5. Back in Cloud Run, update `CORS_ORIGINS` to include that Vercel URL and redeploy the revision.
+
 ## Environment variables
 
 See [`.env.example`](.env.example) for the full list. Nothing sensitive is ever exposed client-side; only

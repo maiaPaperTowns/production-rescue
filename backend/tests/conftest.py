@@ -13,6 +13,20 @@ def hm(h: int, mi: int = 0) -> int:
     return h * 60 + mi
 
 
+@pytest.fixture(autouse=True)
+def _isolate_from_local_credentials(monkeypatch):
+    """Tests must always exercise the deterministic mock/fallback path,
+    regardless of whatever GOOGLE_API_KEY / PARALLEL_API_KEY a developer has
+    configured in their local .env for manual testing against the real APIs.
+    Settings is an lru_cache'd singleton that every service module captured a
+    reference to at import time, so patching its attributes here is visible
+    everywhere without needing to touch os.environ or re-import anything."""
+    from app.core.config import get_settings
+    settings = get_settings()
+    monkeypatch.setattr(settings, "google_api_key", "")
+    monkeypatch.setattr(settings, "parallel_api_key", "")
+
+
 @pytest.fixture()
 def db_session():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)

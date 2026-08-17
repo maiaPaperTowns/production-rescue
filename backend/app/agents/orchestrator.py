@@ -155,7 +155,9 @@ def _run_gemini_tool_loop(ctx: AgentContext) -> bool:
         ])]
 
         for _ in range(MAX_TOOL_STEPS):
-            response = client.models.generate_content(model=settings.gemini_model, contents=contents, config=config)
+            response = gemini_service._generate_content_with_retry(
+                client, model=settings.gemini_model, contents=contents, config=config
+            )
             candidate = response.candidates[0]
             function_calls = [p.function_call for p in candidate.content.parts if p.function_call]
             if not function_calls:
@@ -171,7 +173,10 @@ def _run_gemini_tool_loop(ctx: AgentContext) -> bool:
                 response_parts.append(types.Part.from_function_response(name=fc.name, response=result))
                 if fc.name == "propose_schedule_change":
                     proposed = True
-            contents.append(types.Content(role="tool", parts=response_parts))
+            # The API rejects role="tool" ("Role 'tool' is not supported") despite
+            # that being the conventional name elsewhere; function responses go
+            # back as a "user" turn in this API's Content role vocabulary.
+            contents.append(types.Content(role="user", parts=response_parts))
             if proposed:
                 break
 
@@ -222,6 +227,13 @@ def run_rescue_analysis(db: Session, shooting_day_id: int, raw_text: str) -> m.A
 
     used_gemini = _run_gemini_tool_loop(ctx)
     if not used_gemini:
+        # A partially-run Gemini attempt may have already appended entries to
+        # ctx.log / ctx.candidates before it failed. Start the deterministic
+        # pipeline on a clean context rather than layering on top of that
+        # partial state, which would otherwise duplicate tool calls (e.g. two
+        # get_current_schedule entries) in the audit trail.
+        ctx = AgentContext(db=db, shooting_day=shooting_day, production=production,
+                            day_context=day_context, disruptions=parsed_disruptions)
         _deterministic_pipeline(ctx)
 
     for i, entry in enumerate(ctx.log):

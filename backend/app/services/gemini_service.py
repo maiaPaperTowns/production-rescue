@@ -12,11 +12,31 @@ import logging
 import re
 from typing import Optional
 
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
 from app.core.config import get_settings
 from app.schemas.disruption import DisruptionExtractionResult, DisruptionItem
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def _generate_content_with_retry(client, **kwargs):
+    """Gemini occasionally returns a transient 503 (capacity) even on a
+    perfectly valid request; retry those briefly before giving up. A 404/400
+    (bad model name, bad request) is not transient and fails fast instead."""
+    from google.genai import errors
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=6),
+        retry=retry_if_exception_type(errors.ServerError),
+        reraise=True,
+    )
+    def _call():
+        return client.models.generate_content(**kwargs)
+
+    return _call()
 
 _client = None
 _client_init_attempted = False
@@ -61,6 +81,41 @@ def _get_client():
     return _client
 
 
+# Passing the Pydantic model class directly as response_schema breaks the installed
+# google-genai SDK: Pydantic v2 renders `Optional[str]` as `{"anyOf": [{"type": "string"},
+# {"type": "null"}]}`, and the SDK's schema converter assumes every "type" value is a
+# plain string it can .upper(). Hand-writing the schema in Gemini's OpenAPI-style shape
+# (uppercase types, "nullable" flags instead of anyOf-null unions) sidesteps that entirely.
+_NULLABLE_STRING = {"type": "STRING", "nullable": True}
+_DISRUPTION_ITEM_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "type": {"type": "STRING", "enum": ["weather", "actor_availability", "equipment_delay", "location_unavailable"]},
+        "condition": _NULLABLE_STRING,
+        "start_time": _NULLABLE_STRING,
+        "end_time": _NULLABLE_STRING,
+        "affects": {"type": "ARRAY", "items": {"type": "STRING"}},
+        "actor": _NULLABLE_STRING,
+        "available_until": _NULLABLE_STRING,
+        "available_from": _NULLABLE_STRING,
+        "equipment": _NULLABLE_STRING,
+        "available_after": _NULLABLE_STRING,
+        "location": _NULLABLE_STRING,
+        "unavailable_start": _NULLABLE_STRING,
+        "unavailable_end": _NULLABLE_STRING,
+    },
+    "required": ["type"],
+}
+DISRUPTION_RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "disruptions": {"type": "ARRAY", "items": _DISRUPTION_ITEM_SCHEMA},
+        "summary": {"type": "STRING"},
+    },
+    "required": ["disruptions", "summary"],
+}
+
+
 def parse_disruption_text(raw_text: str, known_names: Optional[dict] = None) -> DisruptionExtractionResult:
     client = _get_client()
     if client is None:
@@ -68,12 +123,13 @@ def parse_disruption_text(raw_text: str, known_names: Optional[dict] = None) -> 
 
     try:
         from google.genai import types
-        response = client.models.generate_content(
+        response = _generate_content_with_retry(
+            client,
             model=settings.gemini_model,
             contents=f"{DISRUPTION_SYSTEM_PROMPT}\n\nProduction team message:\n\"\"\"{raw_text}\"\"\"",
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=DisruptionExtractionResult,
+                response_schema=DISRUPTION_RESPONSE_SCHEMA,
                 temperature=0.1,
             ),
         )
@@ -105,7 +161,7 @@ def explain_recommendation(
         f"Disruption: {disruption_summary}\n\nProposed plan: {plan_description}\n\nImpact: {impact_summary}"
     )
     try:
-        response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+        response = _generate_content_with_retry(client, model=settings.gemini_model, contents=prompt)
         text = (response.text or "").strip()
         return text or _mock_explanation(plan_description, impact_summary)
     except Exception:

@@ -1,17 +1,21 @@
 "use client";
 
-import { CheckCircle2, Loader2, Bot } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import type { AgentAction } from "@/types";
 import { cn } from "@/lib/utils";
+import { Mascot } from "@/components/brand/Mascot";
 
 export function AgentActivityTimeline({ actions, revealedCount }: { actions: AgentAction[]; revealedCount: number }) {
   const visible = actions.slice(0, Math.min(revealedCount + 1, actions.length));
+  const finished = revealedCount >= actions.length;
 
   return (
     <div className="max-w-xl mx-auto">
-      <div className="flex items-center gap-2.5 mb-6">
-        <Bot className="size-5 text-primary" strokeWidth={2} />
-        <h2 className="text-lg font-semibold">Production Rescue is analyzing the situation</h2>
+      <div className="flex items-center gap-3 mb-6">
+        <Mascot pose={finished ? "celebrating" : "thinking"} size={44} />
+        <h2 className="font-display text-xl font-bold tracking-tight">
+          {finished ? "Biscuit found a plan" : "Biscuit is investigating the situation"}
+        </h2>
       </div>
       <ol className="space-y-2.5">
         {visible.map((action, i) => {

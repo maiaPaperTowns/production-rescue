@@ -1,16 +1,21 @@
 "use client";
 
-import { Camera } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Camera, X } from "lucide-react";
 import { useAsync } from "@/hooks/useAsync";
 import { useProduction } from "@/lib/production-context";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AddEquipmentDialog } from "@/components/setup/AddEquipmentDialog";
 
 export default function EquipmentPage() {
   const { schedule } = useProduction();
-  const { data: equipmentList, loading, error } = useAsync(() => api.listEquipment(), []);
+  const { data: equipmentList, loading, error, refetch } = useAsync(() => api.listEquipment(), []);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const sceneNumbersByEquipment = useAsync(async () => {
     const assignments = (schedule?.current_version?.assignments ?? []).filter((a) => a.status !== "dropped");
@@ -25,11 +30,27 @@ export default function EquipmentPage() {
     return map;
   }, [schedule?.current_version?.id]);
 
+  async function handleDelete(id: number, name: string) {
+    setDeletingId(id);
+    try {
+      await api.deleteEquipment(id);
+      toast.success(`${name} removed`);
+      refetch();
+    } catch (err) {
+      toast.error("Could not remove equipment", { description: err instanceof ApiError ? err.message : undefined });
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Equipment</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Every equipment resource available to this production.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Equipment</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Every equipment resource available to this production.</p>
+        </div>
+        <AddEquipmentDialog onCreated={refetch} />
       </div>
 
       {loading || sceneNumbersByEquipment.loading ? (
@@ -45,13 +66,23 @@ export default function EquipmentPage() {
           {equipmentList?.map((item) => {
             const scenesToday = sceneNumbersByEquipment.data?.[item.id] ?? [];
             return (
-              <Card key={item.id}>
+              <Card key={item.id} className="group/eq relative">
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="rounded-full bg-gradient-brand p-2 shadow-[var(--glow-primary)]">
                       <Camera className="size-4 text-white" />
                     </div>
-                    <Badge variant="secondary" className="capitalize">{item.category}</Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary" className="capitalize">{item.category}</Badge>
+                      <Button
+                        variant="ghost" size="icon-xs"
+                        className="opacity-0 group-hover/eq:opacity-100 text-muted-foreground hover:text-destructive"
+                        disabled={deletingId === item.id}
+                        onClick={() => handleDelete(item.id, item.name)}
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <p className="font-medium leading-snug">{item.name}</p>
                   <p className="text-xs">
@@ -65,6 +96,12 @@ export default function EquipmentPage() {
               </Card>
             );
           })}
+          {equipmentList?.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <Camera className="size-8 mb-2" />
+              <p className="text-sm">No equipment yet. Add your first item above.</p>
+            </div>
+          )}
         </div>
       )}
     </div>

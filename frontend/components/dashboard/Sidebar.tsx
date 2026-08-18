@@ -3,71 +3,100 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  CalendarClock,
+  House,
+  CalendarDays,
   Waypoints,
   Users,
   MapPin,
   Camera,
-  Bot,
-  BarChart3,
+  Sparkles,
+  FileChartColumn,
   Settings,
-  Film,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProductionLogo } from "@/components/brand/ProductionLogo";
+import { useProduction } from "@/lib/production-context";
+import { useAsync } from "@/hooks/useAsync";
+import { api } from "@/lib/api";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Command Center", icon: LayoutDashboard },
-  { href: "/schedule", label: "Schedule", icon: CalendarClock },
+export const NAV_ITEMS = [
+  { href: "/", label: "Home", icon: House },
+  { href: "/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/production-map", label: "Production Map", icon: Waypoints },
-  { href: "/cast", label: "Cast", icon: Users },
+  { href: "/cast", label: "People", icon: Users },
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/equipment", label: "Equipment", icon: Camera },
-  { href: "/agent-runs", label: "Agent Runs", icon: Bot },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/agent-runs", label: "AI Assistant", icon: Sparkles, badge: true },
+  { href: "/analytics", label: "Reports", icon: FileChartColumn },
 ];
 
-export function Sidebar() {
+export function SidebarNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { data: runs } = useAsync(() => api.listAgentRuns({ limit: 10 }), []);
+  const pendingCount = runs?.filter((r) => r.status === "proposed").length ?? 0;
 
   return (
-    <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/70 backdrop-blur-xl text-sidebar-foreground">
-      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-sidebar-border">
-        <span className="flex size-7 items-center justify-center rounded-full bg-gradient-brand shadow-[var(--glow-primary)]">
-          <Film className="size-3.5 text-white" strokeWidth={2.5} />
-        </span>
-        <span className="text-sm font-semibold tracking-wide">PRODUCTION RESCUE</span>
+    <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+      {NAV_ITEMS.map((item) => {
+        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors",
+              active
+                ? "bg-secondary text-primary"
+                : "text-muted-foreground hover:bg-secondary/60 hover:text-primary"
+            )}
+          >
+            <Icon className="size-4" strokeWidth={2} />
+            <span className="flex-1">{item.label}</span>
+            {item.badge && pendingCount > 0 && (
+              <span className="flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full bg-[#F2A950] text-[10px] font-semibold text-white">
+                {pendingCount}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function SidebarProductionStatus() {
+  const { production, currentDay } = useProduction();
+  if (!production || !currentDay) return null;
+  return (
+    <div className="mx-3 mb-3 rounded-[14px] bg-secondary px-3.5 py-3">
+      <p className="text-sm font-semibold text-primary truncate">{production.name}</p>
+      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="size-1.5 rounded-full bg-status-ready" />
+        Day {currentDay.day_number} of {production.total_shooting_days}
       </div>
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {NAV_ITEMS.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 rounded-full px-3 py-2 text-sm font-medium transition-all",
-                active
-                  ? "bg-gradient-brand text-white shadow-[var(--glow-primary)]"
-                  : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-              )}
-            >
-              <Icon className="size-4" strokeWidth={2} />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="px-4 py-3 border-t border-sidebar-border">
+    </div>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <aside className="hidden md:flex w-[220px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+      <div className="flex items-center px-5 h-16">
+        <ProductionLogo size={30} />
+      </div>
+      <SidebarNavLinks />
+      <div className="px-3 pb-3">
         <Link
           href="/settings"
-          className="flex items-center gap-2.5 text-sm font-medium text-muted-foreground hover:text-sidebar-accent-foreground"
+          className="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/60 hover:text-primary"
         >
           <Settings className="size-4" strokeWidth={2} />
           Settings
         </Link>
       </div>
+      <SidebarProductionStatus />
     </aside>
   );
 }

@@ -164,6 +164,52 @@ export interface ApprovalResult {
   status: string;
 }
 
+export interface ProductionCreateInput {
+  name: string;
+  total_shooting_days: number;
+  daily_budget: number;
+}
+
+export interface ShootingDayCreateInput {
+  day_number: number;
+  shoot_date: string;
+  day_start?: string;
+  day_end?: string;
+}
+
+export interface ActorCreateInput {
+  name: string;
+  role?: string;
+  day_rate?: number;
+}
+
+export interface LocationCreateInput {
+  name: string;
+  location_type?: string;
+  address?: string;
+  permit_required?: boolean;
+}
+
+export interface EquipmentCreateInput {
+  name: string;
+  category?: string;
+}
+
+export interface SceneCreateInput {
+  scene_number: string;
+  title: string;
+  int_ext: "INT" | "EXT";
+  location_id: number;
+  start: string;
+  end: string;
+  weather_requirement?: string | null;
+  daylight_required?: boolean;
+  priority?: number;
+  actor_ids?: number[];
+  equipment_ids?: number[];
+  depends_on_scene_ids?: number[];
+}
+
 export interface Analytics {
   rescue_events: number;
   production_hours_saved: number;

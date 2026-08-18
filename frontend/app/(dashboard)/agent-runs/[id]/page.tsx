@@ -31,7 +31,7 @@ export default function AgentRunDetailPage({ params }: { params: Promise<{ id: s
     if (!run) return;
     setDecisionLoading(true);
     try {
-      await api.approveRescue(run.id, "Assistant Director");
+      await api.approveRescue(run.id, "Maia Le");
       toast.success("Rescue plan approved", { description: "Schedule updated and decision recorded in the audit log." });
       refreshProduction();
       refetch();
@@ -46,7 +46,7 @@ export default function AgentRunDetailPage({ params }: { params: Promise<{ id: s
     if (!run) return;
     setDecisionLoading(true);
     try {
-      await api.rejectRescue(run.id, "Assistant Director");
+      await api.rejectRescue(run.id, "Maia Le");
       toast.info("Rescue plan rejected");
       refetch();
     } catch (err) {

@@ -1,17 +1,22 @@
 "use client";
 
-import { MapPin, ShieldAlert } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { MapPin, ShieldAlert, X } from "lucide-react";
 import { useAsync } from "@/hooks/useAsync";
 import { useProduction } from "@/lib/production-context";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AddLocationDialog } from "@/components/setup/AddLocationDialog";
 
 export default function LocationsPage() {
   const { schedule } = useProduction();
-  const { data: locations, loading, error } = useAsync(() => api.listLocations(), []);
+  const { data: locations, loading, error, refetch } = useAsync(() => api.listLocations(), []);
   const assignments = schedule?.current_version?.assignments ?? [];
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const scenesByLocation: Record<number, string[]> = {};
   for (const a of assignments) {
@@ -19,11 +24,27 @@ export default function LocationsPage() {
     scenesByLocation[a.location_id] = [...(scenesByLocation[a.location_id] ?? []), a.scene_number];
   }
 
+  async function handleDelete(id: number, name: string) {
+    setDeletingId(id);
+    try {
+      await api.deleteLocation(id);
+      toast.success(`${name} removed`);
+      refetch();
+    } catch (err) {
+      toast.error("Could not remove location", { description: err instanceof ApiError ? err.message : undefined });
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Locations</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Every location available to this production.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Locations</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Every location available to this production.</p>
+        </div>
+        <AddLocationDialog onCreated={refetch} />
       </div>
 
       {loading ? (
@@ -39,13 +60,23 @@ export default function LocationsPage() {
           {locations?.map((loc) => {
             const scenesToday = scenesByLocation[loc.id] ?? [];
             return (
-              <Card key={loc.id}>
+              <Card key={loc.id} className="group/loc relative">
                 <CardContent className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 rounded-full bg-gradient-brand p-2 shadow-[var(--glow-primary)]">
                       <MapPin className="size-4 text-white" />
                     </div>
-                    <Badge variant="secondary" className="capitalize">{loc.location_type}</Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary" className="capitalize">{loc.location_type}</Badge>
+                      <Button
+                        variant="ghost" size="icon-xs"
+                        className="opacity-0 group-hover/loc:opacity-100 text-muted-foreground hover:text-destructive"
+                        disabled={deletingId === loc.id}
+                        onClick={() => handleDelete(loc.id, loc.name)}
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <p className="font-medium leading-snug">{loc.name}</p>
@@ -68,6 +99,12 @@ export default function LocationsPage() {
               </Card>
             );
           })}
+          {locations?.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <MapPin className="size-8 mb-2" />
+              <p className="text-sm">No locations yet. Add your first one above.</p>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -10,6 +10,10 @@ interface ProductionContextValue {
   schedule: Schedule | null;
   loading: boolean;
   error: string | null;
+  /** True only for the genuine cold-start case: no production exists yet. */
+  noProduction: boolean;
+  /** True when a production exists but has no shooting days yet. */
+  noShootingDay: boolean;
   refresh: () => void;
 }
 
@@ -21,20 +25,30 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noProduction, setNoProduction] = useState(false);
+  const [noShootingDay, setNoShootingDay] = useState(false);
   const [tick, setTick] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setNoProduction(false);
+    setNoShootingDay(false);
     try {
       const productions = await api.listProductions();
       const prod = productions[0];
-      if (!prod) throw new Error("No production found. Has the database been seeded?");
+      if (!prod) {
+        setNoProduction(true);
+        return;
+      }
       setProduction(prod);
 
       const days = await api.listShootingDays(prod.id);
       const day = days.find((d) => d.day_number === prod.current_day_number) ?? days[0];
-      if (!day) throw new Error("Production has no shooting days.");
+      if (!day) {
+        setNoShootingDay(true);
+        return;
+      }
       setCurrentDay(day);
 
       const sched = await api.getSchedule(day.id);
@@ -52,7 +66,7 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <ProductionContext.Provider
-      value={{ production, currentDay, schedule, loading, error, refresh: () => setTick((t) => t + 1) }}
+      value={{ production, currentDay, schedule, loading, error, noProduction, noShootingDay, refresh: () => setTick((t) => t + 1) }}
     >
       {children}
     </ProductionContext.Provider>

@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { X, Zap, CheckCircle2, ThumbsDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,116 +9,26 @@ import { AgentActivityTimeline } from "@/components/agents/AgentActivityTimeline
 import { BeforeAfterPanel } from "@/components/rescue/BeforeAfterPanel";
 import { ImpactCards } from "@/components/rescue/ImpactCards";
 import { PlanComparison } from "@/components/rescue/PlanComparison";
-import { api, ApiError } from "@/lib/api";
-import type { AgentRun, Assignment } from "@/types";
+import { useRescueFlow, type RescueFlowState } from "@/hooks/useRescueFlow";
+import type { Assignment } from "@/types";
 
-type Phase = "closed" | "input" | "running" | "results" | "decided";
-
-const REVEAL_INTERVAL_MS = 160;
-
-export function RescueButton({ shootingDayId, originalAssignments, onScheduleChanged }: {
-  shootingDayId: number;
+/**
+ * Full-screen overlay (input modal + running/results/decided panel) for a
+ * rescue flow driven by useRescueFlow. Mount this once per page alongside
+ * whichever trigger(s) call flow.openInput() / flow.submitText().
+ */
+export function RescueFlowOverlay({ flow, originalAssignments }: {
+  flow: RescueFlowState;
   originalAssignments: Assignment[];
-  onScheduleChanged: () => void;
 }) {
-  const [phase, setPhase] = useState<Phase>("closed");
-  const [run, setRun] = useState<AgentRun | null>(null);
-  const [revealedCount, setRevealedCount] = useState(0);
-  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [pendingText, setPendingText] = useState("");
-  const [decisionLoading, setDecisionLoading] = useState(false);
-  const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
-
-  async function handleSubmit(text: string) {
-    setPendingText(text);
-    setPhase("running");
-    setRevealedCount(0);
-    setAnalyzeError(null);
-    try {
-      const result = await api.analyzeRescue(shootingDayId, text);
-      setRun(result);
-      setSelectedPlanId(result.recommended_schedule_version_id);
-    } catch (err) {
-      setAnalyzeError(err instanceof ApiError ? err.message : "Rescue analysis failed unexpectedly.");
-      setPhase("input");
-    }
-  }
-
-  useEffect(() => {
-    if (phase !== "running" || !run) return;
-    const total = run.actions.length;
-    if (total === 0) {
-      setPhase("results");
-      return;
-    }
-    const interval = setInterval(() => {
-      setRevealedCount((c) => {
-        const next = c + 1;
-        if (next >= total) {
-          clearInterval(interval);
-          setTimeout(() => setPhase("results"), 450);
-        }
-        return next;
-      });
-    }, REVEAL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [phase, run]);
-
-  function reset() {
-    setPhase("closed");
-    setRun(null);
-    setRevealedCount(0);
-    setSelectedPlanId(null);
-    setDecision(null);
-    setAnalyzeError(null);
-    setPendingText("");
-  }
-
-  async function handleApprove() {
-    if (!run || !selectedPlanId) return;
-    setDecisionLoading(true);
-    try {
-      await api.approveRescue(run.id, "Assistant Director");
-      setDecision("approved");
-      setPhase("decided");
-      onScheduleChanged();
-      toast.success("Rescue plan approved", { description: "Schedule updated and decision recorded in the audit log." });
-    } catch (err) {
-      toast.error("Could not approve plan", { description: err instanceof ApiError ? err.message : undefined });
-    } finally {
-      setDecisionLoading(false);
-    }
-  }
-
-  async function handleReject() {
-    if (!run) return;
-    setDecisionLoading(true);
-    try {
-      await api.rejectRescue(run.id, "Assistant Director");
-      setDecision("rejected");
-      setPhase("decided");
-      toast.info("Rescue plan rejected", { description: "The original schedule remains active." });
-    } catch (err) {
-      toast.error("Could not reject plan", { description: err instanceof ApiError ? err.message : undefined });
-    } finally {
-      setDecisionLoading(false);
-    }
-  }
-
-  const selectedPlan = run?.plans.find((p) => p.schedule_version_id === selectedPlanId) ?? null;
+  const { phase, run, revealedCount, selectedPlanId, setSelectedPlanId, analyzeError, decisionLoading, decision, selectedPlan } = flow;
 
   return (
     <>
-      <Button size="lg" className="gap-2" onClick={() => setPhase("input")}>
-        <Zap className="size-4" />
-        Report Disruption
-      </Button>
-
       <DisruptionInputModal
         open={phase === "input"}
-        onOpenChange={(o) => !o && setPhase("closed")}
-        onSubmit={handleSubmit}
+        onOpenChange={(o) => !o && flow.reset()}
+        onSubmit={flow.submitText}
         errorMessage={analyzeError}
       />
 
@@ -129,7 +37,7 @@ export function RescueButton({ shootingDayId, originalAssignments, onScheduleCha
           <div className="flex items-center justify-between h-14 shrink-0 border-b border-border px-6">
             <span className="text-sm font-semibold">Rescue Analysis</span>
             {phase !== "running" && (
-              <Button variant="ghost" size="icon" onClick={reset}>
+              <Button variant="ghost" size="icon" onClick={flow.reset}>
                 <X className="size-4" />
               </Button>
             )}
@@ -162,38 +70,36 @@ export function RescueButton({ shootingDayId, originalAssignments, onScheduleCha
                     )}
                   </div>
                 ) : selectedPlan ? (
-                  <>
-                    <Tabs defaultValue="plan">
-                      <TabsList>
-                        <TabsTrigger value="plan">Before / After</TabsTrigger>
-                        <TabsTrigger value="alternatives">Alternatives ({run.plans.length})</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="plan" className="space-y-8 pt-4">
-                        <BeforeAfterPanel
-                          original={originalAssignments}
-                          proposed={selectedPlan}
-                          affectedSceneIds={run.affected_scene_ids}
-                        />
-                        {selectedPlan.impact && (
-                          <div className="space-y-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Impact Summary</p>
-                            <ImpactCards impact={selectedPlan.impact} />
-                          </div>
-                        )}
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why this plan?</p>
-                          <p className="text-sm leading-relaxed text-foreground/90">{run.explanation}</p>
+                  <Tabs defaultValue="plan">
+                    <TabsList>
+                      <TabsTrigger value="plan">Before / After</TabsTrigger>
+                      <TabsTrigger value="alternatives">Alternatives ({run.plans.length})</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="plan" className="space-y-8 pt-4">
+                      <BeforeAfterPanel
+                        original={originalAssignments}
+                        proposed={selectedPlan}
+                        affectedSceneIds={run.affected_scene_ids}
+                      />
+                      {selectedPlan.impact && (
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Impact Summary</p>
+                          <ImpactCards impact={selectedPlan.impact} />
                         </div>
-                      </TabsContent>
-                      <TabsContent value="alternatives" className="pt-4 space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                          Rather than a single arbitrary answer, Production Rescue evaluates every feasible schedule
-                          and ranks the top candidates.
-                        </p>
-                        <PlanComparison plans={run.plans} selectedId={selectedPlanId} onSelect={setSelectedPlanId} />
-                      </TabsContent>
-                    </Tabs>
-                  </>
+                      )}
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why this plan?</p>
+                        <p className="text-sm leading-relaxed text-foreground/90">{run.explanation}</p>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="alternatives" className="pt-4 space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Rather than a single arbitrary answer, Production Rescue evaluates every feasible schedule
+                        and ranks the top candidates.
+                      </p>
+                      <PlanComparison plans={run.plans} selectedId={selectedPlanId} onSelect={setSelectedPlanId} />
+                    </TabsContent>
+                  </Tabs>
                 ) : null}
 
                 {phase === "decided" && decision && (
@@ -218,12 +124,12 @@ export function RescueButton({ shootingDayId, originalAssignments, onScheduleCha
           {phase === "results" && run && run.status !== "infeasible" && (
             <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur px-6 py-4">
               <div className="max-w-5xl mx-auto flex items-center justify-end gap-2">
-                <Button variant="ghost" onClick={handleReject} disabled={decisionLoading} className="gap-2">
+                <Button variant="ghost" onClick={flow.reject} disabled={decisionLoading} className="gap-2">
                   <ThumbsDown className="size-4" />
                   Reject
                 </Button>
                 <Separator orientation="vertical" className="h-6" />
-                <Button onClick={handleApprove} disabled={decisionLoading} className="gap-2">
+                <Button onClick={flow.approve} disabled={decisionLoading} className="gap-2">
                   {decisionLoading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
                   Approve Rescue Plan
                 </Button>
@@ -234,12 +140,31 @@ export function RescueButton({ shootingDayId, originalAssignments, onScheduleCha
           {phase === "decided" && (
             <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur px-6 py-4">
               <div className="max-w-5xl mx-auto flex justify-end">
-                <Button onClick={reset}>Done</Button>
+                <Button onClick={flow.reset}>Done</Button>
               </div>
             </div>
           )}
         </div>
       )}
+    </>
+  );
+}
+
+/** Simple standalone trigger + overlay, for pages that only need one entry point. */
+export function RescueButton({ shootingDayId, originalAssignments, onScheduleChanged }: {
+  shootingDayId: number;
+  originalAssignments: Assignment[];
+  onScheduleChanged: () => void;
+}) {
+  const flow = useRescueFlow(shootingDayId, onScheduleChanged);
+
+  return (
+    <>
+      <Button size="lg" className="gap-2" onClick={flow.openInput}>
+        <Zap className="size-4" />
+        Report Disruption
+      </Button>
+      <RescueFlowOverlay flow={flow} originalAssignments={originalAssignments} />
     </>
   );
 }

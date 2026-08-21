@@ -13,6 +13,7 @@ import type {
   Production,
   ProductionCreateInput,
   Schedule,
+  ScheduleVersion,
   Scene,
   SceneCreateInput,
   ShootingDay,
@@ -64,6 +65,8 @@ export const api = {
     request<ShootingDay>(`/api/productions/${productionId}/shooting-days`, { method: "POST", body: JSON.stringify(payload) }),
 
   getSchedule: (shootingDayId: number) => request<Schedule>(`/api/shooting-days/${shootingDayId}/schedule`),
+  listScheduleVersions: (shootingDayId: number) =>
+    request<ScheduleVersion[]>(`/api/shooting-days/${shootingDayId}/schedule-versions`),
   getScene: (sceneId: number) => request<Scene>(`/api/scenes/${sceneId}`),
   createScene: (shootingDayId: number, payload: SceneCreateInput) =>
     request<Scene>(`/api/shooting-days/${shootingDayId}/scenes`, { method: "POST", body: JSON.stringify(payload) }),

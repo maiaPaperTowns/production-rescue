@@ -7,10 +7,12 @@ import { useRescueFlow } from "@/hooks/useRescueFlow";
 import { useAsync } from "@/hooks/useAsync";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { DisruptionHero } from "@/components/dashboard/DisruptionHero";
+import { WorkflowSteps } from "@/components/dashboard/WorkflowSteps";
 import { ScheduleCard } from "@/components/dashboard/ScheduleCard";
 import { WeatherCard } from "@/components/dashboard/WeatherCard";
 import { AIAssistantCard } from "@/components/dashboard/AIAssistantCard";
 import { RescueFlowOverlay } from "@/components/rescue/RescueFlow";
+import { DEMO_EMERGENCY_TEXT } from "@/components/rescue/DisruptionInputModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -97,7 +99,10 @@ export default function CommandCenterPage() {
         latestRun={latestRun}
         scheduledCount={scheduledAssignments.length}
         onReportDisruption={flow.openInput}
+        onSimulateDemo={() => flow.runDemoEmergency(DEMO_EMERGENCY_TEXT)}
       />
+
+      {!latestRun && <WorkflowSteps />}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <MetricCard label="Scenes Today" value={String(scheduledAssignments.length)} icon={Clapperboard} tone="info" />

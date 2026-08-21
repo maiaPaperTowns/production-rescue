@@ -172,3 +172,57 @@
     background-color: var(--surface-raised);
   }
 }
+
+/* Mascot + workflow motion. Functional signal, not decoration: kept subtle
+   and gated behind prefers-reduced-motion so it never blocks legibility. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes mascot-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.015); }
+  }
+  @keyframes mascot-blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    96% { transform: scaleY(0.1); }
+  }
+  @keyframes mascot-scan {
+    0%, 100% { transform: translateX(-1.5px); }
+    50% { transform: translateX(1.5px); }
+  }
+  @keyframes mascot-bounce-in {
+    0% { transform: translateY(4px) scale(0.96); opacity: 0; }
+    60% { transform: translateY(-2px) scale(1.02); opacity: 1; }
+    100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes mascot-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+  @keyframes sound-wave {
+    0% { opacity: 0; transform: scale(0.6); }
+    40% { opacity: 0.9; }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+  @keyframes storm-flash {
+    0%, 92%, 100% { opacity: 0; }
+    94%, 97% { opacity: 1; }
+  }
+  @keyframes rain-fall {
+    0% { transform: translateY(-2px); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(6px); opacity: 0; }
+  }
+  .mascot-breathe { animation: mascot-breathe 4s ease-in-out infinite; transform-origin: center; }
+  .mascot-blink { animation: mascot-blink 4.5s ease-in-out infinite; transform-origin: center; }
+  .mascot-scan { animation: mascot-scan 2.2s ease-in-out infinite; }
+  .mascot-bounce-in { animation: mascot-bounce-in 0.6s ease-out; }
+  .mascot-pulse { animation: mascot-pulse 1.6s ease-in-out infinite; }
+  .sound-wave { animation: sound-wave 1.8s ease-out infinite; }
+  .storm-flash { animation: storm-flash 7s ease-in-out infinite; }
+  .rain-fall { animation: rain-fall 1.4s linear infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-breathe, .mascot-blink, .mascot-scan, .mascot-bounce-in, .mascot-pulse,
+  .sound-wave, .storm-flash, .rain-fall {
+    animation: none !important;
+  }
+}

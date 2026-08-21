@@ -30,38 +30,53 @@ export const NAV_ITEMS = [
   { href: "/analytics", label: "Reports", icon: FileChartColumn },
 ];
 
+const NAV_SECTIONS = [
+  { label: "Operations", hrefs: ["/", "/schedule", "/production-map"] },
+  { label: "Resources", hrefs: ["/cast", "/locations", "/equipment"] },
+  { label: "Intelligence", hrefs: ["/agent-runs", "/analytics"] },
+];
+
 export function SidebarNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: runs } = useAsync(() => api.listAgentRuns({ limit: 10 }), []);
   const pendingCount = runs?.filter((r) => r.status === "proposed").length ?? 0;
 
   return (
-    <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
-      {NAV_ITEMS.map((item) => {
-        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors",
-              active
-                ? "bg-secondary text-primary"
-                : "text-muted-foreground hover:bg-secondary/60 hover:text-primary"
-            )}
-          >
-            <Icon className="size-4" strokeWidth={2} />
-            <span className="flex-1">{item.label}</span>
-            {item.badge && pendingCount > 0 && (
-              <span className="flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full bg-[#F2A950] text-[10px] font-semibold text-white">
-                {pendingCount}
-              </span>
-            )}
-          </Link>
-        );
-      })}
+    <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
+      {NAV_SECTIONS.map((section) => (
+        <div key={section.label} className="space-y-0.5">
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            {section.label}
+          </p>
+          {section.hrefs.map((href) => {
+            const item = NAV_ITEMS.find((i) => i.href === href)!;
+            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            const Icon = item.icon;
+            const showBadge = (item.badge || item.href === "/") && pendingCount > 0;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-secondary text-primary"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-primary"
+                )}
+              >
+                <Icon className="size-4" strokeWidth={2} />
+                <span className="flex-1">{item.label}</span>
+                {showBadge && (
+                  <span className="flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full bg-[#F2A950] text-[10px] font-semibold text-white">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }

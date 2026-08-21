@@ -4,9 +4,10 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Mascot } from "@/components/brand/Mascot";
 import { Zap, CloudLightning, Drama, Video, MapPinOff } from "lucide-react";
 
-const DEMO_EMERGENCY_TEXT =
+export const DEMO_EMERGENCY_TEXT =
   "Thunderstorms are expected 11am-5pm and Maya must leave by 2pm. Camera B delivery is delayed until 3pm.";
 
 const SHORTCUTS: { label: string; icon: React.ElementType; text: string }[] = [
@@ -38,10 +39,12 @@ export function DisruptionInputModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>What&apos;s changed?</DialogTitle>
+          <div className="flex items-center gap-3">
+            <Mascot pose="listening" size={40} />
+            <DialogTitle>What&apos;s changed?</DialogTitle>
+          </div>
           <DialogDescription>
-            Tell Production Rescue what happened. It will identify affected scenes and propose a rescue plan for
-            today&apos;s shoot.
+            Tell Production Rescue what happened. I&apos;ll check the rest of today&apos;s plan before suggesting anything.
           </DialogDescription>
         </DialogHeader>
 

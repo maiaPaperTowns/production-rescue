@@ -12,7 +12,7 @@ export function AgentActivityTimeline({ actions, revealedCount }: { actions: Age
   return (
     <div className="max-w-xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Mascot pose={finished ? "celebrating" : "thinking"} size={44} />
+        <Mascot pose={finished ? "celebrating" : "analyzing"} size={44} />
         <h2 className="font-display text-xl font-bold tracking-tight">
           {finished ? "Biscuit found a plan" : "Biscuit is investigating the situation"}
         </h2>

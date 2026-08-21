@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowRight, Ban } from "lucide-react";
 import { to12h } from "@/lib/format";
+import { reasonChip } from "@/lib/disruption-tags";
 import type { Assignment, Plan } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,10 @@ function OriginalCard({ assignment, flagReason }: { assignment: Assignment; flag
 }
 
 function RescueCard({ assignment, movedFrom }: { assignment: Assignment; movedFrom: string | null }) {
+  const movedLabel = movedFrom ? (movedFrom > assignment.start ? "Moved earlier" : "Moved later") : null;
+  const chip = assignment.change_reason ? reasonChip(assignment.change_reason) : null;
+  const ChipIcon = chip?.icon;
+
   return (
     <div className="rounded-lg border border-status-ready/30 bg-status-ready/5 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -36,10 +41,17 @@ function RescueCard({ assignment, movedFrom }: { assignment: Assignment; movedFr
         )}
       </div>
       <p className="mt-1 text-sm font-medium leading-snug">{assignment.title}</p>
-      <p className="text-xs text-muted-foreground">{assignment.location_name}</p>
-      {assignment.change_reason && (
-        <p className="mt-2 text-xs text-muted-foreground border-t border-border pt-2">
-          <span className="font-medium text-foreground">Reason: </span>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <p className="text-xs text-muted-foreground">{assignment.location_name}</p>
+        {movedLabel && (
+          <span className="text-[10px] font-medium text-primary bg-surface-lavender rounded-full px-1.5 py-0.5">
+            {movedLabel}
+          </span>
+        )}
+      </div>
+      {chip && ChipIcon && (
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground border-t border-border pt-2">
+          <ChipIcon className="size-3.5 mt-0.5 shrink-0 text-primary" strokeWidth={2} />
           {assignment.change_reason}
         </p>
       )}

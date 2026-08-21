@@ -55,6 +55,23 @@ def get_schedule(shooting_day_id: int, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/shooting-days/{shooting_day_id}/schedule-versions", response_model=list[ScheduleVersionOut])
+def list_schedule_versions(shooting_day_id: int, db: Session = Depends(get_db)):
+    """Every schedule version ever created for this day, oldest first. Version 1
+    is always the original plan before any rescue was applied; the frontend uses
+    this to power the Original vs Current comparison toggle."""
+    day = db.get(m.ShootingDay, shooting_day_id)
+    if day is None:
+        raise HTTPException(404, "Shooting day not found")
+    versions = (
+        db.query(m.ScheduleVersion)
+        .filter_by(shooting_day_id=shooting_day_id)
+        .order_by(m.ScheduleVersion.version_number)
+        .all()
+    )
+    return [version_to_out(v, db) for v in versions]
+
+
 @router.get("/scenes/{scene_id}", response_model=SceneOut)
 def get_scene(scene_id: int, db: Session = Depends(get_db)):
     scene = db.get(m.Scene, scene_id)
